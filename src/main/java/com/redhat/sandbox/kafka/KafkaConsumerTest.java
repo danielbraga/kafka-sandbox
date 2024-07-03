@@ -12,11 +12,20 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.quarkus.runtime.Shutdown;
+import io.quarkus.runtime.Startup;
+import jakarta.enterprise.context.ApplicationScoped;
+
+@Startup
+@ApplicationScoped
 public class KafkaConsumerTest {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaConsumerTest.class);
 
-    public static void main(String[] args) {
+    private boolean readTopic = true;
+
+    @Startup
+    public void start() {
         String bootstrapServers = System.getProperty("test.bootstrap", "my-cluster-kafka-bootstrap:9092");
         String groupId = System.getProperty("test.groupId", "my-group-id");
         String clientId = System.getProperty("test.clientId", "my-client-id");
@@ -35,7 +44,7 @@ public class KafkaConsumerTest {
         consumer.subscribe(Arrays.asList(topic));
 
         // poll for new data
-        while(true){
+        while(readTopic){
             ConsumerRecords<String, String> records =
                     consumer.poll(Duration.ofMillis(100));
 
@@ -44,6 +53,14 @@ public class KafkaConsumerTest {
                 log.info("Partition: " + record.partition() + ", Offset:" + record.offset());
             }
         }
+
+        consumer.close();
+        consumer = null;
+    }
+
+    @Shutdown
+    public void stop() {
+        readTopic = false;
     }
     
 }
